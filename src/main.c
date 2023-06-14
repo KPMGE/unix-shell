@@ -1,14 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include "../include/helpers.h"
-#include <sys/wait.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include "../include/helpers.h"
 
-#define AMOUNT_COMMANDS 10
-#define AMOUNT_ARGS 5
+// Client================================//
+int main(int argc, char **argv) {
+  // exec_commands_on_new_session(create_test_commands(), AMOUNT_COMMANDS);
+  bool foreground_execution = false;
+  char *** buffer = init_buffer();
+  
+  int i=0;  //Testing
+  while(true){
+    // Initializing prompt
+    printf(ANSI_COLOR_RED"acsh > "ANSI_COLOR_RESET);
+    read_shell_input(buffer, &foreground_execution);
+    
+    // Testing
+    if(i == 4) break;
+    i++;  
+  }  
+}
 
+// Testing commands=============//
 char ***create_test_commands() {
   char ***commands = malloc(AMOUNT_COMMANDS * sizeof(char ***)); 
 
@@ -28,8 +45,4 @@ char ***create_test_commands() {
   }
 
   return commands;
-}
-
-int main(int argc, char **argv) {
-  exec_commands_on_new_session(create_test_commands(), AMOUNT_COMMANDS);
 }
