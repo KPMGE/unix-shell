@@ -16,8 +16,9 @@ int main(int argc, char **argv) {
   int i=0;  //Testing
   while(true){
     // Initializing prompt
-    printf(ANSI_COLOR_RED"acsh > "ANSI_COLOR_RESET);
+    printf(COLOR_GREEN_BOLD"acsh > "COLOR_RESET);
     read_shell_input(buffer, &foreground_execution);
+    
     
     // Testing
     if(i == 4) break;
