@@ -5,6 +5,19 @@
 #include <errno.h>
 #include <stdbool.h>
 #include "../include/helpers.h"
+#include "helpers.h"
+
+// Prototypes========//
+// Public
+char ***init_buffer();
+void r_strip(char * string);
+void end_buffer(char *** buffer);
+void end_commands(char ** commands);
+void exec_commands_on_new_session(char ***commands, size_t amount_commads);
+char ***read_shell_input(char ***buffer, bool *foreground_exec, short * commands_amount);
+
+// Private=========================================================//
+char ** split_commands(char * line, int * counter, char ** commands);
 
 // ======================================================================= //
 void exec_commands_on_new_session(char ***commands, size_t amount_commads)
@@ -33,31 +46,29 @@ void exec_commands_on_new_session(char ***commands, size_t amount_commads)
 // ================== //
 char ***init_buffer()
 {
-  // Alternative
-  // static char buffer[AMOUNT_COMMANDS][AMOUNT_ARGS][MAX_ARG_SIZE];
-  //=============================================================//
-
   char ***buffer = calloc(AMOUNT_COMMANDS, sizeof(char **));
-
   for (int x = 0; x < AMOUNT_COMMANDS; x++)
   {
     buffer[x] = calloc(AMOUNT_ARGS, sizeof(char *));
-    for (int y = 0; y < AMOUNT_ARGS; y++)
-    {
-      buffer[x][y] = calloc(MAX_ARG_SIZE, sizeof(char));
-    }
   }
 
   return buffer;
 }
 
 // ============================================ //
-char ***read_shell_input(char ***buffer, bool *foreground_exec)
+char ***read_shell_input(char ***buffer, bool *foreground_exec, short * commands_amount)
 {
   bool error = false;
+  
   // Reading line
   char line[AMOUNT_ARGS * MAX_ARG_SIZE] = "";
   scanf("%[^\n]%*c", line);
+
+  // Removing whitespaces from right side
+  r_strip(line);
+
+  // exiting
+  if(!strcmp(line, "exit")) exit(EXIT_SUCCESS);
 
   // Setting foreground flag
   if (line[strlen(line) - 1] == '%')
@@ -68,6 +79,24 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec)
 
   // Spliting commands
   char **commands = calloc(AMOUNT_COMMANDS, sizeof(char *));
+  if(!split_commands(line, commands_amount, commands)){
+    end_commands(commands);
+    return NULL;
+  } 
+
+  // Spliting args
+  if(!split_args(commands, buffer)){
+    end_commands(commands);
+    return NULL;
+  } 
+    
+  end_commands(commands);
+  return buffer;
+}
+
+//=================================================================//
+char ** split_commands(char * line, int * counter, char ** commands){
+  bool error = false;
   int command_counter = 0;
   char *command = strtok(line, "<3");
   while (command)
@@ -77,26 +106,31 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec)
       error = true;
       break;
     }
-    printf("command = %s\n", command); // debug
+    // printf("command = %s\n", command); // debug
     commands[command_counter] = strdup(command);
-    printf("args[command_counter] = %s\n", commands[command_counter]); // debug
+    // printf("args[command_counter] = %s\n", commands[command_counter]); // debug
     command = strtok(NULL, "<3");
     command_counter++;
   }
 
-  // Verifying error
-  if(error) return NULL;
+  *counter = command_counter;
 
-  // Spliting args
+  if(error) return NULL;
+  return commands;
+}
+
+//==============================================//
+int split_args(char ** commands, char *** buffer){
+  bool error = false;
   char *arg = NULL;
   int args_counter;
-  for(command_counter = 0; command_counter < AMOUNT_COMMANDS; command_counter++)
+  for(int x = 0; x < AMOUNT_COMMANDS; x++)
   {
     // break if command at this index do not exists
-    if(!commands[command_counter]) break;
+    if(!commands[x]) break;
 
     // separating args
-    arg = strtok(commands[command_counter], " ");
+    arg = strtok(commands[x], " ");
     args_counter=0;
     while (arg)
     {
@@ -105,16 +139,52 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec)
         error = true;
         break;
       }
-      printf("arg = %s\n", arg);
+      // printf("arg = %s\n", arg);
 
-      buffer[command_counter][args_counter] = strdup(arg);
+      buffer[x][args_counter] = strdup(arg);
 
       arg = strtok(NULL, " ");
       args_counter++;
     }
   }
 
-  if(error) return NULL;
+  if(error) return 0;
+  return 1;   
+}
 
-  return buffer;
+//=================================//
+void end_commands(char ** commands){
+  if(commands){
+    for(int x=0; x<AMOUNT_COMMANDS; x++){
+      if(commands[x]) free(commands[x]);
+    }
+    free(commands);
+  }
+}
+
+//============================//
+void set_buffer(char ***buffer){
+  if(!buffer) perror("Could not set unexisting buffer!\n");
+  for(int x=0; x<AMOUNT_COMMANDS; x++){
+    for(int y=0; y<AMOUNT_ARGS; y++){
+      buffer[x][y] = NULL;
+    }
+  }
+}
+
+//==============================//
+void end_buffer(char *** buffer){
+  if(!buffer) perror("Could not set unexisting buffer!\n");
+  for(int x=0; x<AMOUNT_COMMANDS; x++){
+    for(int y=0; y<AMOUNT_ARGS; y++){
+      free(buffer[x][y]);
+    }
+    free(buffer[x]);
+  }
+}
+
+void r_strip(char * string){ 
+  while(string[strlen(string)-1] == ' '){
+    string[strlen(string)-1] = '\0';
+  }
 }

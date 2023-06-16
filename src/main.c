@@ -11,19 +11,38 @@
 int main(int argc, char **argv) {
   // exec_commands_on_new_session(create_test_commands(), AMOUNT_COMMANDS);
   bool foreground_execution = false;
+  short commands_amount=0;
   char *** buffer = init_buffer();
   
-  int i=0;  //Testing
+  int a = 0;  //Testing
+
   while(true){
     // Initializing prompt
     printf(COLOR_GREEN_BOLD"acsh > "COLOR_RESET);
-    read_shell_input(buffer, &foreground_execution);
-    
-    
+    read_shell_input(buffer, &foreground_execution, &commands_amount);
+
+    // for(int i=0; i<commands_amount; i++){
+    //   printf("command %d\n", i+1);
+    //   for(int j=0; j<AMOUNT_ARGS; j++){
+    //     if(!buffer[i][j]) break;
+    //     printf("arg %d: %s\n", j+1, buffer[i][j]);       
+    //   }
+    // }
+
+    printf("a = %d\n", a);
+
     // Testing
-    if(i == 4) break;
-    i++;  
-  }  
+    set_buffer(buffer);
+    if(a == 2){
+      break;
+    } 
+    a++;
+    printf("a = %d\n", a);
+  }
+
+  end_buffer(buffer);
+
+  return 0;  
 }
 
 // Testing commands=============//
