@@ -3,7 +3,7 @@ MAIN_FILE_NAME	= main
 SRC             = ./src
 INCLUDE         = ./include
 OBJ             = ./obj
-FLAGS           = -lm -pedantic -Wall -Wextra
+FLAGS           = -lm -pedantic -Wall -Wextra -I/$(INCLUDE)
 COMPILER        = gcc   
 
 C_FILES        = $(wildcard $(SRC)/*.c)
