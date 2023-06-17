@@ -12,6 +12,8 @@
 
 void exec_commands_on_new_session(char ***commands, size_t amount_commads);
 
+void exec_command(char *command, char **args);
+
 // Allocating buffer
 char ***init_buffer();
 
