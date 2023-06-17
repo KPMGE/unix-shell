@@ -22,6 +22,6 @@ void end_buffer(char *** buffer);
 
 // Reading terminal input
 // Returns buffer if SUCESS or NULL if ERROR
-char *** read_shell_input(char ***buffer, bool *foreground_exec, short * commands_amount);
+char *** read_shell_input(char ***buffer, bool *foreground_exec, int * commands_amount);
 
 #endif // !HELPERS_H

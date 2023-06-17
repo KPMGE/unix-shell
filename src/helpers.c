@@ -14,7 +14,7 @@ void r_strip(char * string);
 void end_buffer(char *** buffer);
 void end_commands(char ** commands);
 void exec_commands_on_new_session(char ***commands, size_t amount_commads);
-char ***read_shell_input(char ***buffer, bool *foreground_exec, short * commands_amount);
+char ***read_shell_input(char ***buffer, bool *foreground_exec, int * commands_amount);
 
 // Private=========================================================//
 char ** split_commands(char * line, int * counter, char ** commands);
@@ -56,13 +56,16 @@ char ***init_buffer()
 }
 
 // ============================================ //
-char ***read_shell_input(char ***buffer, bool *foreground_exec, short * commands_amount)
+char ***read_shell_input(char ***buffer, bool *foreground_exec, int * commands_amount)
 {
   bool error = false;
+  size_t size = 0;
+  ssize_t char_amount;
+  char *line = NULL;
+  // scanf("%[^\n]%*c", line);
   
-  // Reading line
-  char line[AMOUNT_ARGS * MAX_ARG_SIZE] = "";
-  scanf("%[^\n]%*c", line);
+  char_amount = getline(&line, &size, stdin);
+  if(char_amount == 1) return NULL;
 
   // Removing whitespaces from right side
   r_strip(line);
@@ -90,7 +93,7 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec, short * commands
     return NULL;
   } 
     
-  end_commands(commands);
+  // end_commands(commands);
   return buffer;
 }
 
@@ -184,7 +187,7 @@ void end_buffer(char *** buffer){
 }
 
 void r_strip(char * string){ 
-  while(string[strlen(string)-1] == ' '){
+  while(string[strlen(string)-1] == ' ' || string[strlen(string)-1] == '\n'){
     string[strlen(string)-1] = '\0';
   }
 }
