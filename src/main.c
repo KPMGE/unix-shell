@@ -1,14 +1,40 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include "../include/helpers.h"
-#include <sys/wait.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include "../include/helpers.h"
 
-#define AMOUNT_COMMANDS 10
-#define AMOUNT_ARGS 5
+// Client================================//
+int main(int argc, char **argv) {
+  // exec_commands_on_new_session(create_test_commands(), AMOUNT_COMMANDS);
+  bool foreground_execution = false;
+  int commands_amount=0;
+  char *** buffer = init_buffer();
 
+  while(true){
+    // Initializing prompt
+    printf(COLOR_GREEN_BOLD"acsh > "COLOR_RESET);
+    read_shell_input(buffer, &foreground_execution, &commands_amount);
+
+    // How to cross the buffer
+    // for(int i=0; i<commands_amount; i++){
+      // printf("command %d\n", i+1);
+      // for(int j=0; j<AMOUNT_ARGS; j++){
+        // if(!buffer[i][j]) break;
+        // printf("arg %d: %s\n", j+1, buffer[i][j]);       
+      // }
+    // }
+  }
+
+  end_buffer(buffer);
+
+  return 0;  
+}
+
+// Testing commands=============//
 char ***create_test_commands() {
   char ***commands = malloc(AMOUNT_COMMANDS * sizeof(char ***)); 
 
@@ -28,8 +54,4 @@ char ***create_test_commands() {
   }
 
   return commands;
-}
-
-int main(int argc, char **argv) {
-  exec_commands_on_new_session(create_test_commands(), AMOUNT_COMMANDS);
 }
