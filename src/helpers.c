@@ -17,6 +17,7 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_am
 
 // Private==============================================================//
 // static char **split_commands(char *line, int *counter, char **commands);
+char * validate_line(char *line, int char_amount, bool *foreground_exec);
 static char **split_commands2(char *line, int *counter, char **commands);
 static int split_args(char **commands, char ***buffer);
 
@@ -66,26 +67,12 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec,
   size_t size = 0;
   ssize_t char_amount;
   char *line = NULL;
-  // scanf("%[^\n]%*c", line);
 
   char_amount = getline(&line, &size, stdin);
-  if (char_amount == 1)
+
+  // Handling exit conditions and formatting
+  if(!validate_line(line, char_amount, foreground_exec))
     return NULL;
-
-  // Removing whitespaces from right side
-  r_strip(line);
-
-  // exiting
-  if (!strcmp(line, "exit")) {
-    exit(EXIT_SUCCESS);
-  }
-
-  // Setting foreground flag
-  if (line[strlen(line) - 1] == '%') {
-    *foreground_exec = true;
-  } else {
-    *foreground_exec = false;
-  }
 
   // Spliting commands
   char **commands = calloc(AMOUNT_COMMANDS, sizeof(char *));
@@ -244,4 +231,28 @@ void r_strip(char *string) {
          string[strlen(string) - 1] == '\n') {
     string[strlen(string) - 1] = '\0';
   }
+}
+
+//=======================================================================//
+char * validate_line(char * line, int char_amount, bool * foreground_exec){
+  // If char is '\n'
+  if (char_amount == 1)
+    return NULL;
+
+  // Removing whitespaces from right side
+  r_strip(line);
+
+  // exiting
+  if (!strcmp(line, "exit")) {
+    exit(EXIT_SUCCESS);
+  }
+
+  // Setting foreground flag
+  if (line[strlen(line) - 1] == '%') {
+    *foreground_exec = true;
+  } else {
+    *foreground_exec = false;
+  }
+
+  return line;
 }
