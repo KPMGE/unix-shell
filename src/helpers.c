@@ -1,4 +1,4 @@
-#include "../include/helpers.h"
+#include <helpers.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 
 // Prototypes========//
-// Public
+// Public==========//
 char ***init_buffer();
 void r_strip(char *string);
 void end_buffer(char ***buffer);
@@ -15,12 +15,12 @@ void end_commands(char **commands);
 void exec_commands_on_new_session(char ***buffer, size_t amount_commads);
 char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_amount);
 
-// Private=========================================================//
+// Private==============================================================//
 // static char **split_commands(char *line, int *counter, char **commands);
 static char **split_commands2(char *line, int *counter, char **commands);
 static int split_args(char **commands, char ***buffer);
 
-
+//===========================================//
 void exec_command(char *command, char **args) {
   execvp(command, args);
   perror("exec error: ");
@@ -63,7 +63,6 @@ char ***init_buffer() {
 // ============================================ //
 char ***read_shell_input(char ***buffer, bool *foreground_exec,
                          int *commands_amount) {
-  bool error = false;
   size_t size = 0;
   ssize_t char_amount;
   char *line = NULL;
@@ -105,15 +104,13 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec,
   return buffer;
 }
 
-
+//================================================================//
 char **split_commands2(char *line, int *counter, char **commands) {
   char token[250];
   memset(token, 0, 250 * sizeof(char));
   int k = 0, commands_count = 0;
 
-  // sleep 30 <3 sleep 10
-
-  for (int i = 0; i < strlen(line) - 1; i++) {
+  for (size_t i = 0; i < strlen(line) - 1; i++) {
     if (line[i] == '<' && line[i + 1] == '3') {
       token[k] = '\0';
       commands[commands_count++] = strdup(token);
@@ -188,7 +185,6 @@ static int split_args(char **commands, char ***buffer) {
         error = true;
         break;
       }
-      // printf("arg = %s\n", arg);
 
       if (!strcmp(arg, "%")) {
         buffer[x][args_counter] = NULL;
@@ -242,6 +238,7 @@ void end_buffer(char ***buffer) {
   }
 }
 
+//========================//
 void r_strip(char *string) {
   while (string[strlen(string) - 1] == ' ' ||
          string[strlen(string) - 1] == '\n') {
