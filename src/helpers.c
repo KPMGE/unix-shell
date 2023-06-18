@@ -17,7 +17,7 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_am
 
 // Private==============================================================//
 // static char **split_commands(char *line, int *counter, char **commands);
-char * validate_line(char *line, int char_amount, bool *foreground_exec);
+static char *validate_line(char *line, int char_amount, bool *foreground_exec, char ***buffer);
 static char **split_commands2(char *line, int *counter, char **commands);
 static int split_args(char **commands, char ***buffer);
 
@@ -62,8 +62,7 @@ char ***init_buffer() {
 }
 
 // ============================================ //
-char ***read_shell_input(char ***buffer, bool *foreground_exec,
-                         int *commands_amount) {
+char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_amount) {
   size_t size = 0;
   ssize_t char_amount;
   char *line = NULL;
@@ -71,7 +70,7 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec,
   char_amount = getline(&line, &size, stdin);
 
   // Handling exit conditions and formatting
-  if(!validate_line(line, char_amount, foreground_exec))
+  if(!validate_line(line, char_amount, foreground_exec, buffer))
     return NULL;
 
   // Spliting commands
@@ -87,15 +86,17 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec,
     return NULL;
   }
 
-  // end_commands(commands);
+  free(line);
+  end_commands(commands);
+
   return buffer;
 }
 
 //================================================================//
 char **split_commands2(char *line, int *counter, char **commands) {
   char token[250];
-  memset(token, 0, 250 * sizeof(char));
   int k = 0, commands_count = 0;
+  memset(token, 0, 250 * sizeof(char));
 
   for (size_t i = 0; i < strlen(line) - 1; i++) {
     if (line[i] == '<' && line[i + 1] == '3') {
@@ -194,8 +195,9 @@ static int split_args(char **commands, char ***buffer) {
 void end_commands(char **commands) {
   if (commands) {
     for (int x = 0; x < AMOUNT_COMMANDS; x++) {
-      if (commands[x])
+      if (commands[x]) {
         free(commands[x]);
+      }
     }
     free(commands);
   }
@@ -203,26 +205,39 @@ void end_commands(char **commands) {
 
 //============================//
 void set_buffer(char ***buffer) {
-  if (!buffer)
+  if (!buffer) {
     perror("Could not set unexisting buffer!\n");
+  }
+
   for (int x = 0; x < AMOUNT_COMMANDS; x++) {
     for (int y = 0; y < AMOUNT_ARGS; y++) {
-      if (!buffer[x][y]) break;
-      buffer[x][y] = NULL;
+      if (buffer[x][y]) {
+        free(buffer[x][y]);
+        buffer[x][y] = NULL;
+      }
     }
   }
 }
 
 //==============================//
 void end_buffer(char ***buffer) {
-  if (!buffer)
+  if (!buffer) {
     perror("Could not set unexisting buffer!\n");
+  }
+
   for (int x = 0; x < AMOUNT_COMMANDS; x++) {
     for (int y = 0; y < AMOUNT_ARGS; y++) {
-      free(buffer[x][y]);
+      if (buffer[x][y]) {
+        free(buffer[x][y]);
+      }
     }
-    free(buffer[x]);
+
+    if (buffer[x]) {
+      free(buffer[x]);
+    }
   }
+
+  free(buffer);
 }
 
 //========================//
@@ -234,16 +249,20 @@ void r_strip(char *string) {
 }
 
 //=======================================================================//
-char * validate_line(char * line, int char_amount, bool * foreground_exec){
+static char *validate_line(char *line, int char_amount, bool *foreground_exec, char ***buffer) {
   // If char is '\n'
-  if (char_amount == 1)
+  if (char_amount == 1) {
+    free(line);
     return NULL;
+  }
 
   // Removing whitespaces from right side
   r_strip(line);
 
   // exiting
   if (!strcmp(line, "exit")) {
+    free(line);
+    end_buffer(buffer);
     exit(EXIT_SUCCESS);
   }
 
@@ -255,4 +274,8 @@ char * validate_line(char * line, int char_amount, bool * foreground_exec){
   }
 
   return line;
+}
+
+bool is_cd_function(char *str) {
+  return !strcmp(str, "cd");
 }

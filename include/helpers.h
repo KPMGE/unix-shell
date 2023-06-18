@@ -11,7 +11,6 @@
 #include <stddef.h>
 
 void exec_commands_on_new_session(char ***commands, size_t amount_commads);
-
 void exec_command(char *command, char **args);
 
 // Allocating buffer
@@ -26,5 +25,7 @@ void end_buffer(char ***buffer);
 // Reading terminal input
 // Returns buffer if SUCESS or NULL if ERROR
 char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_amount);
+
+bool is_cd_function(char *str);
 
 #endif // !HELPERS_H

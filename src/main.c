@@ -13,9 +13,21 @@ int main() {
   char ***buffer = init_buffer();
 
   while (true) {
-    // Initializing prompt
     printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
-    read_shell_input(buffer, &foreground_execution, &commands_amount);
+
+    if (!read_shell_input(buffer, &foreground_execution, &commands_amount)) {
+      continue;
+    }
+
+    if (is_cd_function(buffer[0][0])) {
+      if (chdir(buffer[0][1]) != 0) {
+        perror("chdir error: ");
+        exit(EXIT_FAILURE);
+      }
+
+      set_buffer(buffer);
+      continue;
+    }
 
     pid_t pid = fork();
 
@@ -34,6 +46,7 @@ int main() {
       }
     } else {
       set_buffer(buffer);
+
       if (foreground_execution) {
         wait(NULL);
       } else {
