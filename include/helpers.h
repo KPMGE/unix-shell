@@ -28,4 +28,8 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_am
 
 bool is_cd_function(char *str);
 
-#endif // !HELPERS_H
+void set_background_groups(int group);
+
+int get_background_groups();
+
+#endif  // !HELPERS_H

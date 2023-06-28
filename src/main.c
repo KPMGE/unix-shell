@@ -14,6 +14,7 @@ bool foreground_execution = false;
 pid_t foreground_pid = 0;
 
 int main() {
+    set_background_groups(1);
     int commands_amount = 0;
     char ***buffer = init_buffer();
 
@@ -23,6 +24,7 @@ int main() {
 
     while (true) {
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
+        printf("%d ", get_background_groups());
 
         if (!read_shell_input(buffer, &foreground_execution, &commands_amount)) {
             continue;
@@ -59,6 +61,7 @@ int main() {
                 foreground_pid = pid;
                 wait(NULL);
             } else {
+                set_background_groups(get_background_groups() + 1);
                 waitpid(pid, NULL, WNOHANG);
             }
         }
@@ -69,7 +72,7 @@ int main() {
 
 void signal_handler(int signum) {
     if (foreground_execution) {
-        kill(foreground_pid, SIGKILL);
+        kill(foreground_pid, SIGTERM);
         foreground_execution = false;
         printf("\n");
     } else {

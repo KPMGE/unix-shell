@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <helpers.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +9,16 @@
 
 // Prototypes========//
 // Public==========//
+
+int background_groups;
+
+void set_background_groups(int group) {
+    background_groups = group;
+}
+int get_background_groups() {
+    return background_groups;
+}
+
 char ***init_buffer();
 void r_strip(char *string);
 void end_buffer(char ***buffer);
@@ -34,7 +45,7 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         perror("setsid error: ");
         exit(EXIT_FAILURE);
     }
-
+    setpgid(0, background_groups);
     for (size_t i = 1; i < amount_commads; i++) {
         pid_t pid = fork();
 
@@ -264,6 +275,9 @@ static char *validate_line(char *line, int char_amount, bool *foreground_exec, c
     if (!strcmp(line, "exit")) {
         free(line);
         end_buffer(buffer);
+        for (int i = 1; i < background_groups; i++) {
+            killpg(i, SIGTERM);
+        }
         exit(EXIT_SUCCESS);
     }
 
