@@ -19,7 +19,7 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_am
 
 // Private==============================================================//
 // static char **split_commands(char *line, int *counter, char **commands);
-static char *validate_line(char *line, int char_amount, bool *foreground_exec, char ***buffer);
+static char *validate_line(char *line, int char_amount, bool *foreground_exec);
 static char **split_commands2(char *line, int *counter, char **commands);
 static int split_args(char **commands, char ***buffer);
 
@@ -46,6 +46,7 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         }
 
         if (pid == 0) {
+            // set group id to parent process id (fork in main)
             setpgid(0, pgid);
             exec_command(buffer[i][0], buffer[i]);
         }
@@ -73,7 +74,7 @@ char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_am
     char_amount = getline(&line, &size, stdin);
 
     // Handling exit conditions and formatting
-    if (!validate_line(line, char_amount, foreground_exec, buffer))
+    if (!validate_line(line, char_amount, foreground_exec))
         return NULL;
 
     // Spliting commands
@@ -253,7 +254,7 @@ void r_strip(char *string) {
 }
 
 //=======================================================================//
-static char *validate_line(char *line, int char_amount, bool *foreground_exec, char ***buffer) {
+static char *validate_line(char *line, int char_amount, bool *foreground_exec) {
     // If char is '\n'
     if (char_amount == 1) {
         free(line);

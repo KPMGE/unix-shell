@@ -8,7 +8,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define MAX_PID 32768
+
 void signal_handler(int signum);
+void sigusr1_handler(int signum);
 
 bool foreground_execution = false;
 pid_t foreground_pid = 0;
@@ -23,6 +26,7 @@ int main() {
     signal(SIGINT, signal_handler);
     signal(SIGQUIT, signal_handler);
     signal(SIGTSTP, signal_handler);
+    signal(SIGUSR1, sigusr1_handler);
 
     while (true) {
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
@@ -41,6 +45,9 @@ int main() {
             continue;
         }
         if (is_exit_function(buffer[0][0])) {
+            for (int i = 0; i < b_size; i++) {
+                killpg(background_pid[i], SIGTERM);
+            }
             end_buffer(buffer);
             exit(EXIT_SUCCESS);
         }
@@ -91,11 +98,42 @@ void signal_handler(int signum) {
             signalChar = 'Z';
 
         for (int i = 0; i < b_size; i++) {
-            printf("%d ", background_pid[i]);
+            int pid_count = 0;
+            for (pid_t pid = 1; pid <= MAX_PID; pid++) {
+                if (getpgid(pid) == background_pid[i])
+                    pid_count++;
+            }
+            printf("group: %d - process: %d\n", background_pid[i], pid_count);
         }
 
         printf(COLOR_RED "ERROR: You can not terminate the program via Ctrl-%c signal.\n" COLOR_RESET, signalChar);
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
         fflush(stdout);  // force buffer
     }
+}
+
+void sigusr1_handler(int signum) {
+    bool is_background = false;
+    bool is_protected = false;
+    pid_t pgid = getpgid(getpid());
+    int pid_count = 0;
+
+    for (int i = 0; i < b_size; i++) {
+        if (background_pid[i] == pgid)
+            is_background = true;
+    }
+
+    // not very efficient approach
+    if (is_background) {
+        for (pid_t pid = 1; pid <= MAX_PID; pid++) {
+            if (getpgid(pid) == pgid)
+                pid_count++;
+        }
+        printf("group: %d - process: %d\n", pgid, pid_count);
+        if (pid_count == 1)
+            is_protected = true;
+    }
+
+    if (is_background && !is_protected)
+        killpg(pgid, SIGTERM);
 }
