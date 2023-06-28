@@ -10,15 +10,6 @@
 // Prototypes========//
 // Public==========//
 
-int background_groups;
-
-void set_background_groups(int group) {
-    background_groups = group;
-}
-int get_background_groups() {
-    return background_groups;
-}
-
 char ***init_buffer();
 void r_strip(char *string);
 void end_buffer(char ***buffer);
@@ -45,7 +36,7 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         perror("setsid error: ");
         exit(EXIT_FAILURE);
     }
-    setpgid(0, background_groups);
+    pid_t pgid = getpid();
     for (size_t i = 1; i < amount_commads; i++) {
         pid_t pid = fork();
 
@@ -55,6 +46,7 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         }
 
         if (pid == 0) {
+            setpgid(0, pgid);
             exec_command(buffer[i][0], buffer[i]);
         }
     }
@@ -272,14 +264,11 @@ static char *validate_line(char *line, int char_amount, bool *foreground_exec, c
     r_strip(line);
 
     // exiting
-    if (!strcmp(line, "exit")) {
-        free(line);
-        end_buffer(buffer);
-        for (int i = 1; i < background_groups; i++) {
-            killpg(i, SIGTERM);
-        }
-        exit(EXIT_SUCCESS);
-    }
+    // if (!strcmp(line, "exit")) {
+    //    free(line);
+    //    end_buffer(buffer);
+    //    exit(EXIT_SUCCESS);
+    //}
 
     // Setting foreground flag
     if (line[strlen(line) - 1] == '%') {
@@ -293,4 +282,8 @@ static char *validate_line(char *line, int char_amount, bool *foreground_exec, c
 
 bool is_cd_function(char *str) {
     return !strcmp(str, "cd");
+}
+
+bool is_exit_function(char *str) {
+    return !strcmp(str, "exit");
 }

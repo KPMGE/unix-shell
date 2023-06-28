@@ -27,9 +27,6 @@ void end_buffer(char ***buffer);
 char ***read_shell_input(char ***buffer, bool *foreground_exec, int *commands_amount);
 
 bool is_cd_function(char *str);
-
-void set_background_groups(int group);
-
-int get_background_groups();
+bool is_exit_function(char *str);
 
 #endif  // !HELPERS_H

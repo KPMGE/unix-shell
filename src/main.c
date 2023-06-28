@@ -13,8 +13,10 @@ void signal_handler(int signum);
 bool foreground_execution = false;
 pid_t foreground_pid = 0;
 
+pid_t background_pid[100];
+int b_size = 0;
+
 int main() {
-    set_background_groups(1);
     int commands_amount = 0;
     char ***buffer = init_buffer();
 
@@ -24,7 +26,6 @@ int main() {
 
     while (true) {
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
-        printf("%d ", get_background_groups());
 
         if (!read_shell_input(buffer, &foreground_execution, &commands_amount)) {
             continue;
@@ -38,6 +39,10 @@ int main() {
 
             set_buffer(buffer);
             continue;
+        }
+        if (is_exit_function(buffer[0][0])) {
+            end_buffer(buffer);
+            exit(EXIT_SUCCESS);
         }
 
         pid_t pid = fork();
@@ -61,7 +66,8 @@ int main() {
                 foreground_pid = pid;
                 wait(NULL);
             } else {
-                set_background_groups(get_background_groups() + 1);
+                background_pid[b_size] = pid;
+                b_size++;
                 waitpid(pid, NULL, WNOHANG);
             }
         }
@@ -83,6 +89,10 @@ void signal_handler(int signum) {
             signalChar = '\\';
         if (signum == SIGTSTP)
             signalChar = 'Z';
+
+        for (int i = 0; i < b_size; i++) {
+            printf("%d ", background_pid[i]);
+        }
 
         printf(COLOR_RED "ERROR: You can not terminate the program via Ctrl-%c signal.\n" COLOR_RESET, signalChar);
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
