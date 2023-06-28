@@ -38,6 +38,7 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         perror("setsid error: ");
         exit(EXIT_FAILURE);
     }
+    initialize_unix_signals();
     pid_t pgid = getpid();
     for (size_t i = 1; i < amount_commads; i++) {
         pid_t pid = fork();
@@ -294,12 +295,10 @@ static void sigusr1_handler(int signum) {
             if (getpgid(pid) == pgid)
                 pid_count++;
         }
-        printf("group: %d - process: %d\n", pgid, pid_count);
         if (pid_count == 1)
             is_protected = true;
     }
 
-    if (is_background && !is_protected)
-        return;
-    // killpg(pgid, SIGTERM);
+    // if (is_background && !is_protected)
+    //     killpg(pgid, SIGTERM);
 }
