@@ -6,7 +6,6 @@ static char *validate_line(char *line, int char_amount);
 static void end_commands(char **commands);
 static void r_strip(char *string);
 static void signal_handler(int signum);
-static void sigusr1_handler(int signum);
 
 // Global environment variables
 bool foreground_execution;
@@ -24,13 +23,30 @@ void initialize_unix_signals() {
     signal(SIGINT, signal_handler);
     signal(SIGQUIT, signal_handler);
     signal(SIGTSTP, signal_handler);
-    signal(SIGUSR1, sigusr1_handler);
 }
 
 void exec_command(char *command, char **args) {
-    execvp(command, args);
-    perror("exec error: ");
-    exit(EXIT_FAILURE);
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("fork error: ");
+        exit(-1);
+    }
+    if (pid == 0) {
+        execvp(command, args);
+        perror("exec error: ");
+        exit(EXIT_FAILURE);
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFSIGNALED(status)) {
+            int signal = WTERMSIG(status);
+            if (signal == SIGUSR1) {
+                killpg(getpgid(pid), SIGTERM);
+            }
+        }
+        exit(EXIT_SUCCESS);
+    }
 }
 
 void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
@@ -38,7 +54,6 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         perror("setsid error: ");
         exit(EXIT_FAILURE);
     }
-    initialize_unix_signals();
     pid_t pgid = getpid();
     for (size_t i = 1; i < amount_commads; i++) {
         pid_t pid = fork();
@@ -54,7 +69,15 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
             exec_command(buffer[i][0], buffer[i]);
         }
     }
+    if (amount_commads == 1) {
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigaddset(&mask, SIGUSR1);
+        sigprocmask(SIG_BLOCK, &mask, NULL);
+    }
 
+    // set group id to parent process id (fork in main)
+    setpgid(0, pgid);
     exec_command(buffer[0][0], buffer[0]);
 }
 
@@ -165,7 +188,7 @@ static char **split_commands2(char *line, int *counter, char **commands) {
     commands[commands_count++] = strdup(token);
 
     if (commands_count >= AMOUNT_COMMANDS) {
-        printf(COLOR_RED "You can not type more than %d commands!\n" COLOR_RESET, AMOUNT_COMMANDS);
+        printf(COLOR_RED "acsh > You can not type more than %d commands!\n" COLOR_RESET, AMOUNT_COMMANDS);
         return NULL;
     }
 
@@ -188,7 +211,7 @@ static int split_args(char **commands, char ***buffer) {
         args_counter = 0;
         while (arg) {
             if (args_counter >= AMOUNT_ARGS) {
-                printf(COLOR_RED "You can not type more than %d args!\n" COLOR_RESET,
+                printf(COLOR_RED "acsh > You can not type more than %d args!\n" COLOR_RESET,
                        AMOUNT_ARGS);
                 error = true;
                 break;
@@ -250,10 +273,10 @@ static void r_strip(char *string) {
 }
 
 static void signal_handler(int signum) {
+    printf("\n");
     if (foreground_execution) {
         kill(foreground_pid, SIGTERM);
         foreground_execution = false;
-        printf("\n");
     } else {
         char signalChar = '?';
         if (signum == SIGINT)
@@ -263,42 +286,17 @@ static void signal_handler(int signum) {
         if (signum == SIGTSTP)
             signalChar = 'Z';
 
-        // for (int i = 0; i < b_size; i++) {
-        // int pid_count = 0;
-        //  for (pid_t pid = 1; pid <= MAX_PID; pid++) {
-        //        if (getpgid(pid) == background_pid[i])
-        //            pid_count++;
-        //    }
-        //    printf("group: %d - process: %d\n", background_pid[i], pid_count);
-        //}
+        for (int i = 0; i < b_size; i++) {
+            int pid_count = 0;
+            for (pid_t pid = 1; pid <= 32768; pid++) {
+                if (getpgid(pid) == background_pid[i])
+                    pid_count++;
+            }
+            printf("group: %d - process: %d\n", background_pid[i], pid_count);
+        }
 
-        printf(COLOR_RED "ERROR: You can not terminate the program via Ctrl-%c signal.\n" COLOR_RESET, signalChar);
+        printf(COLOR_RED "acsh > You can not terminate the program via Ctrl-%c signal.\n" COLOR_RESET, signalChar);
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
         fflush(stdout);  // force buffer
     }
-}
-
-static void sigusr1_handler(int signum) {
-    bool is_background = false;
-    bool is_protected = false;
-    pid_t pgid = getpgid(getpid());
-    int pid_count = signum - signum;
-
-    for (int i = 0; i < b_size; i++) {
-        if (background_pid[i] == pgid)
-            is_background = true;
-    }
-
-    // not very efficient approach
-    if (is_background) {
-        for (pid_t pid = 1; pid <= MAX_PID; pid++) {
-            if (getpgid(pid) == pgid)
-                pid_count++;
-        }
-        if (pid_count == 1)
-            is_protected = true;
-    }
-
-    // if (is_background && !is_protected)
-    //     killpg(pgid, SIGTERM);
 }

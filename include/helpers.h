@@ -17,7 +17,6 @@
 #define COLOR_GREEN_BOLD "\033[1;32m"
 #define COLOR_RESET "\033[0m"
 #define COLOR_RED "\033[0;31m"
-#define MAX_PID 32768
 #define MAX_BACKGROUND_PROCESS 1000
 
 // Global environment variables
