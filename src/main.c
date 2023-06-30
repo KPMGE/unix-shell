@@ -1,7 +1,7 @@
 #include <helpers.h>
 
 int main() {
-    initialize_unix_envs();
+    initialize_unix_envs(getpid());
     initialize_unix_signals();
     int commands_amount = 0;
     char ***buffer = init_buffer();
@@ -23,9 +23,7 @@ int main() {
             continue;
         }
         if (is_exit_function(buffer[0][0])) {
-            for (int i = 0; i < b_size; i++) {
-                killpg(background_pid[i], SIGTERM);
-            }
+            finalize_unix_envs();
             end_buffer(buffer);
             exit(EXIT_SUCCESS);
         }
@@ -38,25 +36,23 @@ int main() {
         }
 
         if (pid == 0) {
-            if (foreground_execution) {
+            if (is_foreground_execution()) {
                 exec_command(buffer[0][0], buffer[0]);
             }
 
-            if (!foreground_execution) {
+            else {
                 exec_commands_on_new_session(buffer, commands_amount);
             }
         } else {
             set_buffer(buffer);
-            if (foreground_execution) {
-                foreground_pid = pid;
+            if (is_foreground_execution()) {
+                register_foreground_process(pid);
                 wait(NULL);
             } else {
-                background_pid[b_size] = pid;
-                b_size++;
+                register_background_process(pid);
                 waitpid(pid, NULL, WNOHANG);
             }
         }
     }
-
-    end_buffer(buffer);
+    exit(EXIT_FAILURE);
 }

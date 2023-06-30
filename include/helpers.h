@@ -7,26 +7,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define AMOUNT_ARGS 4
-#define MAX_ARG_SIZE 50
-#define AMOUNT_COMMANDS 5
 #define COLOR_GREEN_BOLD "\033[1;32m"
 #define COLOR_RESET "\033[0m"
 #define COLOR_RED "\033[0;31m"
-#define MAX_BACKGROUND_PROCESS 1000
-
-// Global environment variables
-extern bool foreground_execution;
-extern pid_t foreground_pid;
-extern pid_t background_pid[MAX_BACKGROUND_PROCESS];
-extern int b_size;
 
 // Initialize environment variables
-void initialize_unix_envs();
+void initialize_unix_envs(pid_t pid);
+
+// Finalize environment variables
+void finalize_unix_envs();
 
 // Initialize signal processing
 void initialize_unix_signals();
@@ -36,6 +31,12 @@ void exec_command(char *command, char **args);
 
 // Run background process
 void exec_commands_on_new_session(char ***commands, size_t amount_commads);
+
+// Register a new foreground process in environment variables
+void register_foreground_process(pid_t pid);
+
+// Register a new background process in environment variables
+void register_background_process(pid_t pid);
 
 // Allocating buffer
 char ***init_buffer();
@@ -55,5 +56,8 @@ bool is_cd_function(char *str);
 
 // Checks if the command is "exit"
 bool is_exit_function(char *str);
+
+// Checks if the command should be run in foreground
+bool is_foreground_execution();
 
 #endif  // !HELPERS_H

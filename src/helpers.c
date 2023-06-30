@@ -1,28 +1,63 @@
 #include <helpers.h>
 
+#define AMOUNT_ARGS 4
+#define MAX_ARG_SIZE 50
+#define MAX_BACKGROUND_PROCESS 1000
+#define AMOUNT_COMMANDS 5
+
 static char **split_commands2(char *line, int *counter, char **commands);
 static int split_args(char **commands, char ***buffer);
 static char *validate_line(char *line, int char_amount);
 static void end_commands(char **commands);
 static void r_strip(char *string);
 static void signal_handler(int signum);
+static void sigusr1_handler(int signum);
 
 // Global environment variables
 bool foreground_execution;
 pid_t foreground_pid;
 pid_t background_pid[MAX_BACKGROUND_PROCESS];
 int b_size;
+pid_t acsh_pid;
+int shmid;
+int *shared_pid;
 
-void initialize_unix_envs() {
+void initialize_unix_envs(pid_t pid) {
     foreground_execution = false;
     foreground_pid = 0;
     b_size = 0;
+    acsh_pid = pid;
+
+    int key = ftok(".", 'R');
+    if (key == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
+    }
+    shmid = shmget(key, 100, IPC_CREAT | 0666);
+    if (shmid == -1) {
+        perror("shmget");
+        exit(EXIT_FAILURE);
+    }
+    shared_pid = (int *)shmat(shmid, NULL, 0);
+    if (shared_pid == (int *)-1) {
+        perror("shmat");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void finalize_unix_envs() {
+    for (int i = 0; i < b_size; i++) {
+        killpg(background_pid[i], SIGTERM);
+    }
+    shmdt(shared_pid);
+    shmctl(shmid, IPC_RMID, NULL);
 }
 
 void initialize_unix_signals() {
     signal(SIGINT, signal_handler);
     signal(SIGQUIT, signal_handler);
     signal(SIGTSTP, signal_handler);
+    signal(SIGUSR1, sigusr1_handler);
 }
 
 void exec_command(char *command, char **args) {
@@ -42,7 +77,8 @@ void exec_command(char *command, char **args) {
         if (WIFSIGNALED(status)) {
             int signal = WTERMSIG(status);
             if (signal == SIGUSR1) {
-                killpg(getpgid(pid), SIGTERM);
+                *shared_pid = getpgid(0);
+                kill(acsh_pid, SIGUSR1);
             }
         }
         exit(EXIT_SUCCESS);
@@ -79,6 +115,15 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
     // set group id to parent process id (fork in main)
     setpgid(0, pgid);
     exec_command(buffer[0][0], buffer[0]);
+}
+
+void register_foreground_process(pid_t pid) {
+    foreground_pid = pid;
+}
+
+void register_background_process(pid_t pid) {
+    background_pid[b_size] = pid;
+    b_size++;
 }
 
 char ***read_shell_input(char ***buffer, int *commands_amount) {
@@ -161,6 +206,10 @@ bool is_cd_function(char *str) {
 
 bool is_exit_function(char *str) {
     return !strcmp(str, "exit");
+}
+
+bool is_foreground_execution() {
+    return foreground_execution;
 }
 
 static char **split_commands2(char *line, int *counter, char **commands) {
@@ -286,17 +335,13 @@ static void signal_handler(int signum) {
         if (signum == SIGTSTP)
             signalChar = 'Z';
 
-        for (int i = 0; i < b_size; i++) {
-            int pid_count = 0;
-            for (pid_t pid = 1; pid <= 32768; pid++) {
-                if (getpgid(pid) == background_pid[i])
-                    pid_count++;
-            }
-            printf("group: %d - process: %d\n", background_pid[i], pid_count);
-        }
-
         printf(COLOR_RED "acsh > You can not terminate the program via Ctrl-%c signal.\n" COLOR_RESET, signalChar);
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
         fflush(stdout);  // force buffer
     }
+}
+
+static void sigusr1_handler(int signum) {
+    *shared_pid += signum - signum;
+    killpg(*shared_pid, SIGTERM);
 }
