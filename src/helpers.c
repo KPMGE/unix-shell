@@ -90,6 +90,18 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         perror("setsid error: ");
         exit(EXIT_FAILURE);
     }
+
+
+    FILE* null_file = fopen("/dev/null", "w");
+    if (null_file == NULL) {
+        perror("Failed to open /dev/null");
+        exit(EXIT_FAILURE);
+    }
+
+    // Redirect stdout and stderr to /dev/null
+    freopen("/dev/null", "w", stdout);
+    freopen("/dev/null", "w", stderr);
+
     pid_t pgid = getpid();
     for (size_t i = 1; i < amount_commads; i++) {
         pid_t pid = fork();
