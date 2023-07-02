@@ -335,7 +335,7 @@ static void signal_handler(int signum) {
         if (signum == SIGTSTP)
             signalChar = 'Z';
 
-        printf(COLOR_RED "acsh > You can not terminate the program via Ctrl-%c signal.\n" COLOR_RESET, signalChar);
+        printf(COLOR_RED "acsh > Nao adianta enviar o sinal por Ctrl-%c. Estou vacinado!\n" COLOR_RESET, signalChar);
         printf(COLOR_GREEN_BOLD "acsh > " COLOR_RESET);
         fflush(stdout);  // force buffer
     }
