@@ -5,9 +5,10 @@
 #define MAX_BACKGROUND_PROCESS 1000
 #define AMOUNT_COMMANDS 5
 
-static char **split_commands2(char *line, int *counter, char **commands);
+// Prototypes=========================================================//
+static char **split_commands(char *line, int *counter, char **commands);
 static int split_args(char **commands, char ***buffer);
-static char *validate_line(char *line, int char_amount);
+static char *validate_line(char *line, int char_amount, char *** buffer);
 static void end_commands(char **commands);
 static void r_strip(char *string);
 static void signal_handler(int signum);
@@ -22,6 +23,7 @@ pid_t acsh_pid;
 int shmid;
 int *shared_pid;
 
+//====================================//
 void initialize_unix_envs(pid_t pid) {
     foreground_execution = false;
     foreground_pid = 0;
@@ -45,6 +47,7 @@ void initialize_unix_envs(pid_t pid) {
     }
 }
 
+//=========================//
 void finalize_unix_envs() {
     for (int i = 0; i < b_size; i++) {
         killpg(background_pid[i], SIGTERM);
@@ -53,6 +56,7 @@ void finalize_unix_envs() {
     shmctl(shmid, IPC_RMID, NULL);
 }
 
+//=============================//
 void initialize_unix_signals() {
     signal(SIGINT, signal_handler);
     signal(SIGQUIT, signal_handler);
@@ -60,6 +64,7 @@ void initialize_unix_signals() {
     signal(SIGUSR1, sigusr1_handler);
 }
 
+//===========================================//
 void exec_command(char *command, char **args) {
     pid_t pid = fork();
 
@@ -85,12 +90,12 @@ void exec_command(char *command, char **args) {
     }
 }
 
+//=====================================================================//
 void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
     if (setsid() == -1) {
         perror("setsid error: ");
         exit(EXIT_FAILURE);
     }
-
 
     FILE* null_file = fopen("/dev/null", "w");
     if (null_file == NULL) {
@@ -123,21 +128,23 @@ void exec_commands_on_new_session(char ***buffer, size_t amount_commads) {
         sigaddset(&mask, SIGUSR1);
         sigprocmask(SIG_BLOCK, &mask, NULL);
     }
-
     // set group id to parent process id (fork in main)
     setpgid(0, pgid);
     exec_command(buffer[0][0], buffer[0]);
 }
 
+//==========================================//
 void register_foreground_process(pid_t pid) {
     foreground_pid = pid;
 }
 
+//==========================================//
 void register_background_process(pid_t pid) {
     background_pid[b_size] = pid;
     b_size++;
 }
 
+//=============================================================//
 char ***read_shell_input(char ***buffer, int *commands_amount) {
     size_t size = 0;
     ssize_t char_amount;
@@ -146,12 +153,12 @@ char ***read_shell_input(char ***buffer, int *commands_amount) {
     char_amount = getline(&line, &size, stdin);
 
     // formatting
-    if (!validate_line(line, char_amount))
+    if (!validate_line(line, char_amount, buffer))
         return NULL;
 
     // Spliting commands
     char **commands = calloc(AMOUNT_COMMANDS, sizeof(char *));
-    if (!split_commands2(line, commands_amount, commands)) {
+    if (!split_commands(line, commands_amount, commands)) {
         end_commands(commands);
         return NULL;
     }
@@ -161,27 +168,26 @@ char ***read_shell_input(char ***buffer, int *commands_amount) {
         end_commands(commands);
         return NULL;
     }
-
     free(line);
     end_commands(commands);
 
     return buffer;
 }
 
+//====================//
 char ***init_buffer() {
     char ***buffer = calloc(AMOUNT_COMMANDS, sizeof(char **));
     for (int x = 0; x < AMOUNT_COMMANDS; x++) {
         buffer[x] = calloc(AMOUNT_ARGS, sizeof(char *));
     }
-
     return buffer;
 }
 
+//===============================//
 void set_buffer(char ***buffer) {
     if (!buffer) {
         perror("Could not set unexisting buffer!\n");
     }
-
     for (int x = 0; x < AMOUNT_COMMANDS; x++) {
         for (int y = 0; y < AMOUNT_ARGS; y++) {
             if (buffer[x][y]) {
@@ -192,39 +198,41 @@ void set_buffer(char ***buffer) {
     }
 }
 
+//=============================//
 void end_buffer(char ***buffer) {
     if (!buffer) {
         perror("Could not set unexisting buffer!\n");
     }
-
     for (int x = 0; x < AMOUNT_COMMANDS; x++) {
         for (int y = 0; y < AMOUNT_ARGS; y++) {
             if (buffer[x][y]) {
                 free(buffer[x][y]);
             }
         }
-
         if (buffer[x]) {
             free(buffer[x]);
         }
     }
-
     free(buffer);
 }
 
+//============================//
 bool is_cd_function(char *str) {
     return !strcmp(str, "cd");
 }
 
+//==============================//
 bool is_exit_function(char *str) {
     return !strcmp(str, "exit");
 }
 
+//============================//
 bool is_foreground_execution() {
     return foreground_execution;
 }
 
-static char **split_commands2(char *line, int *counter, char **commands) {
+//=====================================================================//
+static char **split_commands(char *line, int *counter, char **commands) {
     char token[250];
     int k = 0, commands_count = 0;
     memset(token, 0, 250 * sizeof(char));
@@ -233,18 +241,14 @@ static char **split_commands2(char *line, int *counter, char **commands) {
         if (line[i] == '<' && line[i + 1] == '3') {
             token[k] = '\0';
             commands[commands_count++] = strdup(token);
-
             k = 0;
             i++;
             memset(token, 0, 250 * sizeof(char));
-
             continue;
         }
-
         token[k++] = line[i];
         token[k] = line[i + 1];
     }
-
     token[k + 1] = '\0';
     commands[commands_count++] = strdup(token);
 
@@ -252,12 +256,11 @@ static char **split_commands2(char *line, int *counter, char **commands) {
         printf(COLOR_RED "acsh > You can not type more than %d commands!\n" COLOR_RESET, AMOUNT_COMMANDS);
         return NULL;
     }
-
     *counter = commands_count;
-
     return commands;
 }
 
+//=====================================================//
 static int split_args(char **commands, char ***buffer) {
     bool error = false;
     char *arg = NULL;
@@ -266,7 +269,6 @@ static int split_args(char **commands, char ***buffer) {
         // break if command at this index do not exists
         if (!commands[x])
             break;
-
         // separating args
         arg = strtok(commands[x], " ");
         args_counter = 0;
@@ -277,31 +279,33 @@ static int split_args(char **commands, char ***buffer) {
                 error = true;
                 break;
             }
-
             if (!strcmp(arg, "%")) {
                 buffer[x][args_counter] = NULL;
                 break;
             }
-
             buffer[x][args_counter] = strdup(arg);
-
             arg = strtok(NULL, " ");
             args_counter++;
         }
     }
-
     if (error)
         return 0;
     return 1;
 }
 
-static char *validate_line(char *line, int char_amount) {
+//======================================================================//
+static char *validate_line(char *line, int char_amount, char *** buffer) {
+    if(char_amount < 0){
+        finalize_unix_envs();
+        end_buffer(buffer);
+        free(line);
+        exit(EXIT_SUCCESS);
+    }
     // If char is '\n'
     if (char_amount == 1) {
         free(line);
         return NULL;
     }
-
     // Removing whitespaces from right side
     r_strip(line);
 
@@ -311,10 +315,10 @@ static char *validate_line(char *line, int char_amount) {
     } else {
         foreground_execution = false;
     }
-
     return line;
 }
 
+//=======================================//
 static void end_commands(char **commands) {
     if (commands) {
         for (int x = 0; x < AMOUNT_COMMANDS; x++) {
@@ -326,6 +330,7 @@ static void end_commands(char **commands) {
     }
 }
 
+//===============================//
 static void r_strip(char *string) {
     while (string[strlen(string) - 1] == ' ' ||
            string[strlen(string) - 1] == '\n') {
@@ -333,6 +338,7 @@ static void r_strip(char *string) {
     }
 }
 
+//=====================================//
 static void signal_handler(int signum) {
     printf("\n");
     if (foreground_execution) {
@@ -353,6 +359,7 @@ static void signal_handler(int signum) {
     }
 }
 
+//=====================================//
 static void sigusr1_handler(int signum) {
     *shared_pid += signum - signum;
     killpg(*shared_pid, SIGTERM);
