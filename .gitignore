@@ -1,3 +1,4 @@
 obj/
 acsh
 .vscode/
+tests/
