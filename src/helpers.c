@@ -238,6 +238,12 @@ static char **split_commands(char *line, int *counter, char **commands) {
     memset(token, 0, 250 * sizeof(char));
 
     for (size_t i = 0; i < strlen(line) - 1; i++) {
+
+        if (commands_count >= AMOUNT_COMMANDS) {
+            printf(COLOR_RED "acsh > You can not type more than %d commands!\n" COLOR_RESET, AMOUNT_COMMANDS);
+            return NULL;
+        }
+
         if (line[i] == '<' && line[i + 1] == '3') {
             token[k] = '\0';
             commands[commands_count++] = strdup(token);
@@ -252,10 +258,6 @@ static char **split_commands(char *line, int *counter, char **commands) {
     token[k + 1] = '\0';
     commands[commands_count++] = strdup(token);
 
-    if (commands_count >= AMOUNT_COMMANDS) {
-        printf(COLOR_RED "acsh > You can not type more than %d commands!\n" COLOR_RESET, AMOUNT_COMMANDS);
-        return NULL;
-    }
     *counter = commands_count;
     return commands;
 }
@@ -295,6 +297,7 @@ static int split_args(char **commands, char ***buffer) {
 
 //======================================================================//
 static char *validate_line(char *line, int char_amount, char *** buffer) {
+    //Ctrl-D
     if(char_amount < 0){
         finalize_unix_envs();
         end_buffer(buffer);
